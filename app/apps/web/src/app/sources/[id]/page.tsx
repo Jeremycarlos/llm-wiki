@@ -1,0 +1,234 @@
+import { readFile } from "node:fs/promises";
+import { uiError } from "@/lib/ui-text";
+import { join } from "node:path";
+
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getSource, listPageRows, WIKI_PATHS } from "@llm-wiki/core";
+
+import { PageContainer, PageHeader } from "@/components/page-shell";
+import { MarkdownView } from "@/components/wiki/markdown-view";
+import { openWikiContext, requireSetup } from "@/lib/server-wiki";
+
+export const dynamic = "force-dynamic";
+
+const MAX_RAW_BYTES = 1_000_000; // 1 MB
+
+const FORMAT_LABEL: Record<string, string> = {
+  markdown: "Markdown",
+  md: "Markdown",
+  text: "纯文本",
+  txt: "纯文本",
+  html: "HTML",
+  url: "网页正文",
+  pdf: "PDF",
+  docx: "DOCX",
+  pptx: "PPTX",
+  xlsx: "XLSX",
+  image: "图片",
+};
+
+function formatSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 16).replace("T", " ");
+}
+
+// Pages that list this source in their page_sources rows. Cheap query —
+// joins a small table on a small one. Tells the user "where did this source
+// end up in the wiki".
+function pagesUsingSource(
+  ctx: Awaited<ReturnType<typeof openWikiContext>>,
+  sourceId: string,
+): Array<{ slug: string; title: string }> {
+  const rows = ctx.db
+    .prepare(
+      `SELECT p.slug, p.title FROM page_sources ps
+       JOIN pages p ON p.slug = ps.page_slug
+       WHERE ps.source_id = ?
+       ORDER BY p.title`,
+    )
+    .all(sourceId) as Array<{ slug: string; title: string }>;
+  return rows;
+}
+
+export default async function SourceDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  await requireSetup("ingest");
+  const ctx = await openWikiContext();
+  try {
+    const source = getSource(ctx.db, params.id);
+    if (!source) notFound();
+
+    const pages = pagesUsingSource(ctx, params.id);
+    const knownSlugs = listPageRows(ctx.db).map((r) => r.slug);
+
+    const rawPath = join(ctx.wikiPath, WIKI_PATHS.raw, source.filename);
+    let rawText: string | null = null;
+    let rawError: string | null = null;
+    let truncated = false;
+    try {
+      const buf = await readFile(rawPath);
+      if (buf.length > MAX_RAW_BYTES) {
+        rawText = buf.subarray(0, MAX_RAW_BYTES).toString("utf8");
+        truncated = true;
+      } else {
+        rawText = buf.toString("utf8");
+      }
+      // Quick binary sniff — the replacement char shows up when utf8 decode
+      // hits non-text bytes.
+      if (rawText.includes("�")) {
+        rawText = null;
+        rawError = "这是二进制文件，请使用支持此格式的应用打开。";
+      }
+    } catch (err) {
+      rawError = uiError(err) ?? "无法读取原始文件";
+    }
+
+    const title =
+      source.title?.trim() || source.original_name?.trim() || source.filename;
+    const formatLabel = FORMAT_LABEL[source.format] ?? source.format.toUpperCase();
+
+    return (
+      <PageContainer width="lg">
+        <PageHeader
+          eyebrow="资料来源"
+          title={title}
+          description={
+            <span className="font-mono text-[13px] break-all">{rawPath}</span>
+          }
+          actions={
+            <Link
+              href="/sources"
+              className="text-ui text-primary underline underline-offset-2 hover:text-primary/80"
+            >
+              ← 返回资料列表
+            </Link>
+          }
+        />
+
+        {/* Metadata strip — format, dates, size, original URL if any. The
+            things you'd want at a glance before reading the body. */}
+        <dl className="mb-6 grid grid-cols-2 gap-x-6 gap-y-2 rounded-md border border-border/70 bg-card p-4 text-sm sm:grid-cols-4">
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+              格式
+            </dt>
+            <dd className="mt-0.5 font-medium">{formatLabel}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+              大小
+            </dt>
+            <dd className="mt-0.5 font-medium tabular-nums">
+              {formatSize(source.size_bytes)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+              添加时间
+            </dt>
+            <dd className="mt-0.5 font-mono text-[12px]">{formatDate(source.added_at)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+              已整理
+            </dt>
+            <dd className="mt-0.5 font-mono text-[12px]">
+              {source.ingested_at ? formatDate(source.ingested_at) : "pending"}
+            </dd>
+          </div>
+          {source.original_name ? (
+            <div className="col-span-2">
+              <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+                原文件名
+              </dt>
+              <dd className="mt-0.5 font-mono text-[12px]">{source.original_name}</dd>
+            </div>
+          ) : null}
+          {source.url ? (
+            <div className="col-span-2">
+              <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+                原始链接
+              </dt>
+              <dd className="mt-0.5">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all font-mono text-[12px] text-primary underline underline-offset-2"
+                >
+                  {source.url}
+                </a>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {/* Wiki pages that the LLM produced from this source. The
+            "compounded into the wiki" view — answers "where did this
+            source end up?" */}
+        {pages.length > 0 ? (
+          <section className="mb-6 rounded-md border border-border/70 bg-card p-4">
+            <h2 className="mb-2 text-caption font-semibold uppercase tracking-wider text-muted-foreground">
+              关联知识页 {pages.length} 个知识页
+            </h2>
+            <ul className="flex flex-wrap gap-1.5">
+              {pages.map((p) => (
+                <li key={p.slug}>
+                  <Link
+                    href={`/wiki/${p.slug}`}
+                    className="rounded-full border border-border bg-background px-2.5 py-1 text-xs hover:border-primary/40 hover:bg-accent"
+                  >
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {/* Raw body — the unmodified content as the LLM saw it. Markdown
+            renders nicely; plain text falls through the same renderer. */}
+        <section>
+          <h2 className="mb-3 text-caption font-semibold uppercase tracking-wider text-muted-foreground">
+            原始内容
+          </h2>
+          {rawError ? (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+              <p>{rawError}</p>
+              <p className="mt-2 text-xs">
+                请在本机打开{" "}
+                <code className="font-mono break-all">{rawPath}</code> 查看原文件。
+              </p>
+            </div>
+          ) : rawText ? (
+            <>
+              <article className="rounded-md border border-border/70 bg-card p-5">
+                <MarkdownView content={rawText} knownSlugs={knownSlugs} />
+              </article>
+              {truncated ? (
+                <p className="mt-2 text-caption text-muted-foreground">
+                  预览仅显示前 1 MB，完整文件保存在{" "}
+                  <code className="font-mono break-all">{rawPath}</code>.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">暂无可预览内容。</p>
+          )}
+        </section>
+      </PageContainer>
+    );
+  } finally {
+    ctx.db.close();
+  }
+}

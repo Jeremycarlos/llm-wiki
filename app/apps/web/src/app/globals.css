@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    --font-serif: "Microsoft YaHei", "PingFang SC", sans-serif;
+    --font-display: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    --font-mono: Consolas, "SFMono-Regular", monospace;
+    --background: 45 20% 97%;
+    --foreground: 190 18% 15%;
+    --elevated: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 190 18% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 190 18% 15%;
+    --secondary: 160 12% 94%;
+    --secondary-foreground: 190 18% 15%;
+    --muted: 160 10% 94%;
+    --muted-foreground: 190 8% 42%;
+    --primary: 166 45% 29%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 160 20% 90%;
+    --accent-foreground: 166 45% 22%;
+    --accent-soft: 160 30% 94%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 170 10% 87%;
+    --input: 170 10% 84%;
+    --ring: 166 45% 29%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 190 16% 10%;
+    --foreground: 160 12% 91%;
+    --elevated: 190 14% 16%;
+    --card: 190 14% 13%;
+    --card-foreground: 160 12% 91%;
+    --popover: 190 14% 14%;
+    --popover-foreground: 160 12% 91%;
+    --secondary: 190 16% 12%;
+    --secondary-foreground: 160 12% 91%;
+    --muted: 190 12% 17%;
+    --muted-foreground: 180 8% 65%;
+    --primary: 160 38% 64%;
+    --primary-foreground: 190 20% 10%;
+    --accent: 165 20% 20%;
+    --accent-foreground: 160 30% 84%;
+    --accent-soft: 165 20% 17%;
+    --destructive: 0 70% 68%;
+    --destructive-foreground: 190 20% 10%;
+    --border: 190 10% 23%;
+    --input: 190 10% 27%;
+    --ring: 160 38% 64%;
+  }
+  * { @apply border-border; }
+  html { @apply antialiased; }
+  body { @apply bg-background text-foreground font-sans; font-size: 14px; line-height: 1.65; }
+  h1, h2, h3 { @apply font-display; letter-spacing: 0; text-wrap: balance; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+  button, input, select, textarea { font-family: inherit; }
+  button:disabled { cursor: not-allowed; }
+  select { max-width: 100%; }
+  code, kbd, pre, samp { @apply font-mono; }
+  code, .font-mono { overflow-wrap: anywhere; }
+  pre, pre code { overflow-wrap: normal; }
+  ::selection { background: hsl(var(--primary) / .18); }
+}
+
+.prose { @apply font-serif; font-size: 1rem; line-height: 1.85; overflow-wrap: anywhere; }
+.prose code { @apply font-mono; }
+.prose pre { overflow-x: auto; overflow-wrap: normal; }
+.prose h1, .prose h2, .prose h3 { line-height: 1.5; }
+.prose p { margin-top: 1em; margin-bottom: 1em; }
+.tracking-wider, .tracking-widest { letter-spacing: .015em; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

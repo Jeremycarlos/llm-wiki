@@ -1,5 +1,13 @@
 # LLM Wiki 本地状态：设置、数据库、页面历史和回收站。
 .llm-wiki/
+.local/
+node_modules/
+.pnpm-store/
+.next/
+.next-dev/
+dist/
+*.tsbuildinfo
+*.log
 
 # 私有知识数据。公开仓库仅保留明确白名单中的演示文件和说明。
 /raw/*
