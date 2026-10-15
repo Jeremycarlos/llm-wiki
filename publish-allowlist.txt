@@ -2,6 +2,7 @@
 .gitignore
 CLAUDE.md
 README.md
+docs/images/llm-wiki-query.png
 index.example.md
 log.example.md
 publish-allowlist.txt

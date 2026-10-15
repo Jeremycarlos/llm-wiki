@@ -1,4 +1,4 @@
-# KnowledgeGarden 私人知识库规则
+# LLM Wiki 私人知识库规则
 
 ## 主题
 
