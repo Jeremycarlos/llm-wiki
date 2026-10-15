@@ -1,0 +1,13 @@
+# 每行一个允许公开的仓库相对路径。
+.gitignore
+CLAUDE.md
+README.md
+index.example.md
+log.example.md
+publish-allowlist.txt
+raw/README.md
+raw/demo-01-information-vs-knowledge.md
+raw/demo-02-rag-basics.md
+raw/demo-03-agent-memory-and-knowledge-management.md
+scripts/check-sensitive.ps1
+wiki/README.md

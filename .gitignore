@@ -1,0 +1,31 @@
+# LLM Wiki 本地状态：设置、数据库、页面历史和回收站。
+.llm-wiki/
+
+# 私有知识数据。公开仓库仅保留明确白名单中的演示文件和说明。
+/raw/*
+!/raw/README.md
+!/raw/demo-*.md
+/wiki/*
+!/wiki/README.md
+/chats/
+/index.md
+/log.md
+
+# 本地凭证与环境配置。
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+secrets*.json
+
+# 本地数据库、缓存和系统文件。
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+Thumbs.db
